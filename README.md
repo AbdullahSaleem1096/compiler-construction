@@ -46,10 +46,36 @@ bison -d parser.y
 flex lexer.l
 ```
 
-### Step 3: Compile and Run
+## How to Run Phase 3 (Semantic Analysis)
+
+The semantic analyzer traverses the AST, performs type checking, and manages scopes using a symbol table.
+
+### Step 1: Navigate to the Syntax Analysis Directory
+(Note: The main entry point remains the parser, but it now links with the semantic analysis modules).
 ```bash
-gcc parser.tab.c lex.yy.c -o parser
-./parser ../test_program.ml
+cd syntax_analysis
+```
+
+### Step 2: Generate the Parser and Lexer
+```bash
+bison -d parser.y
+flex lexer.l
+```
+
+### Step 3: Compile with Semantic Analysis Modules
+```bash
+gcc parser.tab.c lex.yy.c ../semantic_analysis/semantic.c ../semantic_analysis/symbol_table.c -o compiler
+```
+
+### Step 4: Run the Compiler
+**On a valid program:**
+```bash
+./compiler ../test_program.ml
+```
+
+**On an invalid program (to see error reporting):**
+```bash
+./compiler ../invalid_program.ml
 ```
 
 ---

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
+#include "../semantic_analysis/semantic.h"
 
 extern int yylex();
 extern int line_num;
@@ -10,6 +11,12 @@ extern char* yytext;
 void yyerror(const char* s);
 
 ASTNode* root;
+
+/* Helper to set line number */
+ASTNode* set_line(ASTNode* node) {
+    if (node) node->line = line_num;
+    return node;
+}
 
 %}
 
@@ -36,7 +43,7 @@ ASTNode* root;
 %%
 
 program:
-    global_list { root = create_node(NODE_PROGRAM, NULL, $1, NULL); }
+    global_list { root = set_line(create_node(NODE_PROGRAM, NULL, $1, NULL)); }
     ;
 
 global_list:
@@ -51,10 +58,12 @@ global_item:
 
 function_def:
     type IDENTIFIER LPAREN parameter_list RPAREN block { 
-        $$ = create_node(NODE_FUNC_DEF, $2, $4, $6); 
+        $$ = set_line(create_node(NODE_FUNC_DEF, $2, $4, $6)); 
+        $$->dataType = strdup($1->value);
     }
     | type IDENTIFIER LPAREN RPAREN block { 
-        $$ = create_node(NODE_FUNC_DEF, $2, NULL, $5); 
+        $$ = set_line(create_node(NODE_FUNC_DEF, $2, NULL, $5)); 
+        $$->dataType = strdup($1->value);
     }
     ;
 
@@ -64,11 +73,11 @@ parameter_list:
     ;
 
 parameter:
-    type IDENTIFIER { $$ = create_node(NODE_PARAM, $2, $1, NULL); }
+    type IDENTIFIER { $$ = set_line(create_node(NODE_PARAM, $2, $1, NULL)); }
     ;
 
 block:
-    LBRACE statement_list RBRACE { $$ = create_node(NODE_BLOCK, NULL, $2, NULL); }
+    LBRACE statement_list RBRACE { $$ = set_line(create_node(NODE_BLOCK, NULL, $2, NULL)); }
     ;
 
 statement_list:
@@ -87,37 +96,37 @@ statement:
     ;
 
 declaration:
-    type IDENTIFIER { $$ = create_node(NODE_VAR_DECL, $2, $1, NULL); }
-    | type IDENTIFIER ASSIGN expression { $$ = create_node(NODE_VAR_DECL, $2, $1, $4); }
+    type IDENTIFIER { $$ = set_line(create_node(NODE_VAR_DECL, $2, $1, NULL)); }
+    | type IDENTIFIER ASSIGN expression { $$ = set_line(create_node(NODE_VAR_DECL, $2, $1, $4)); }
     ;
 
 type:
-    INT_TYPE { $$ = create_node(NODE_IDENTIFIER, "int", NULL, NULL); }
-    | FLOAT_TYPE { $$ = create_node(NODE_IDENTIFIER, "float", NULL, NULL); }
+    INT_TYPE { $$ = set_line(create_node(NODE_IDENTIFIER, "int", NULL, NULL)); }
+    | FLOAT_TYPE { $$ = set_line(create_node(NODE_IDENTIFIER, "float", NULL, NULL)); }
     ;
 
 assignment:
-    IDENTIFIER ASSIGN expression { $$ = create_node(NODE_ASSIGN, $1, $3, NULL); }
+    IDENTIFIER ASSIGN expression { $$ = set_line(create_node(NODE_ASSIGN, $1, $3, NULL)); }
     ;
 
 if_statement:
-    IF LPAREN expression RPAREN block { $$ = create_node(NODE_IF, NULL, $3, $5); }
+    IF LPAREN expression RPAREN block { $$ = set_line(create_node(NODE_IF, NULL, $3, $5)); }
     | IF LPAREN expression RPAREN block ELSE block { 
-        ASTNode* else_node = create_node(NODE_BLOCK, "else", $7, NULL);
-        $$ = create_node(NODE_IF, NULL, $3, create_node(NODE_BLOCK, "then_else", $5, else_node)); 
+        ASTNode* else_node = set_line(create_node(NODE_BLOCK, "else", $7, NULL));
+        $$ = set_line(create_node(NODE_IF, NULL, $3, set_line(create_node(NODE_BLOCK, "then_else", $5, else_node)))); 
     }
     ;
 
 while_statement:
-    WHILE LPAREN expression RPAREN block { $$ = create_node(NODE_WHILE, NULL, $3, $5); }
+    WHILE LPAREN expression RPAREN block { $$ = set_line(create_node(NODE_WHILE, NULL, $3, $5)); }
     ;
 
 return_statement:
-    RETURN expression { $$ = create_node(NODE_RETURN, NULL, $2, NULL); }
+    RETURN expression { $$ = set_line(create_node(NODE_RETURN, NULL, $2, NULL)); }
     ;
 
 print_statement:
-    PRINT LPAREN expression RPAREN { $$ = create_node(NODE_PRINT, NULL, $3, NULL); }
+    PRINT LPAREN expression RPAREN { $$ = set_line(create_node(NODE_PRINT, NULL, $3, NULL)); }
     ;
 
 expression:
@@ -126,40 +135,40 @@ expression:
 
 relational_expr:
     additive_expr { $$ = $1; }
-    | additive_expr LT additive_expr { $$ = create_node(NODE_BINARY_EXPR, "<", $1, $3); }
-    | additive_expr GT additive_expr { $$ = create_node(NODE_BINARY_EXPR, ">", $1, $3); }
-    | additive_expr EQ additive_expr { $$ = create_node(NODE_BINARY_EXPR, "==", $1, $3); }
-    | additive_expr NE additive_expr { $$ = create_node(NODE_BINARY_EXPR, "!=", $1, $3); }
+    | additive_expr LT additive_expr { $$ = set_line(create_node(NODE_BINARY_EXPR, "<", $1, $3)); }
+    | additive_expr GT additive_expr { $$ = set_line(create_node(NODE_BINARY_EXPR, ">", $1, $3)); }
+    | additive_expr EQ additive_expr { $$ = set_line(create_node(NODE_BINARY_EXPR, "==", $1, $3)); }
+    | additive_expr NE additive_expr { $$ = set_line(create_node(NODE_BINARY_EXPR, "!=", $1, $3)); }
     ;
 
 additive_expr:
     multiplicative_expr { $$ = $1; }
-    | additive_expr PLUS multiplicative_expr { $$ = create_node(NODE_BINARY_EXPR, "+", $1, $3); }
-    | additive_expr MINUS multiplicative_expr { $$ = create_node(NODE_BINARY_EXPR, "-", $1, $3); }
+    | additive_expr PLUS multiplicative_expr { $$ = set_line(create_node(NODE_BINARY_EXPR, "+", $1, $3)); }
+    | additive_expr MINUS multiplicative_expr { $$ = set_line(create_node(NODE_BINARY_EXPR, "-", $1, $3)); }
     ;
 
 multiplicative_expr:
     primary { $$ = $1; }
-    | multiplicative_expr MULT primary { $$ = create_node(NODE_BINARY_EXPR, "*", $1, $3); }
-    | multiplicative_expr DIV primary { $$ = create_node(NODE_BINARY_EXPR, "/", $1, $3); }
+    | multiplicative_expr MULT primary { $$ = set_line(create_node(NODE_BINARY_EXPR, "*", $1, $3)); }
+    | multiplicative_expr DIV primary { $$ = set_line(create_node(NODE_BINARY_EXPR, "/", $1, $3)); }
     ;
 
 primary:
-    IDENTIFIER { $$ = create_node(NODE_IDENTIFIER, $1, NULL, NULL); }
-    | INTEGER_LITERAL { $$ = create_node(NODE_INT_LITERAL, $1, NULL, NULL); }
-    | FLOAT_LITERAL { $$ = create_node(NODE_FLOAT_LITERAL, $1, NULL, NULL); }
+    IDENTIFIER { $$ = set_line(create_node(NODE_IDENTIFIER, $1, NULL, NULL)); }
+    | INTEGER_LITERAL { $$ = set_line(create_node(NODE_INT_LITERAL, $1, NULL, NULL)); }
+    | FLOAT_LITERAL { $$ = set_line(create_node(NODE_FLOAT_LITERAL, $1, NULL, NULL)); }
     | LPAREN expression RPAREN { $$ = $2; }
     | function_call { $$ = $1; }
     ;
 
 function_call:
-    IDENTIFIER LPAREN argument_list RPAREN { $$ = create_node(NODE_FUNC_CALL, $1, $3, NULL); }
-    | IDENTIFIER LPAREN RPAREN { $$ = create_node(NODE_FUNC_CALL, $1, NULL, NULL); }
+    IDENTIFIER LPAREN argument_list RPAREN { $$ = set_line(create_node(NODE_FUNC_CALL, $1, $3, NULL)); }
+    | IDENTIFIER LPAREN RPAREN { $$ = set_line(create_node(NODE_FUNC_CALL, $1, NULL, NULL)); }
     ;
 
 argument_list:
-    expression { $$ = create_node(NODE_ARG, NULL, $1, NULL); }
-    | argument_list COMMA expression { $$ = append_node($1, create_node(NODE_ARG, NULL, $3, NULL)); }
+    expression { $$ = set_line(create_node(NODE_ARG, NULL, $1, NULL)); }
+    | argument_list COMMA expression { $$ = append_node($1, set_line(create_node(NODE_ARG, NULL, $3, NULL))); }
     ;
 
 %%
@@ -180,7 +189,10 @@ int main(int argc, char** argv) {
     }
 
     if (yyparse() == 0) {
-        printf("\n--- Abstract Syntax Tree ---\n");
+        printf("\nSemantic Analysis:\n");
+        check_semantics(root);
+
+        printf("\n--- Annotated Abstract Syntax Tree ---\n");
         print_ast(root, 0);
         printf("--- End of AST ---\n");
     } else {

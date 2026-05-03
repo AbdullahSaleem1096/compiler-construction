@@ -29,6 +29,7 @@ typedef enum {
 typedef struct ASTNode {
     NodeType type;
     char* value;            /* Lexeme or operator */
+    char* dataType;         /* Evaluated data type (int, float, etc.) */
     struct ASTNode* left;
     struct ASTNode* right;
     struct ASTNode* next;   /* For lists (statements, parameters, etc.) */
@@ -40,10 +41,11 @@ static inline ASTNode* create_node(NodeType type, char* value, ASTNode* left, AS
     ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     node->type = type;
     node->value = value ? strdup(value) : NULL;
+    node->dataType = NULL;
     node->left = left;
     node->right = right;
     node->next = NULL;
-    node->line = 0; /* To be set by lexer/parser if needed */
+    node->line = 0; 
     return node;
 }
 
@@ -61,6 +63,10 @@ static inline void print_ast(ASTNode* node, int indent) {
     if (!node) return;
 
     for (int i = 0; i < indent; i++) printf("  ");
+
+    if (node->dataType) {
+        printf("[%s] ", node->dataType);
+    }
 
     switch (node->type) {
         case NODE_PROGRAM: printf("Program\n"); break;
